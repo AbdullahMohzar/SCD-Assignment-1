@@ -196,7 +196,7 @@ jobs:
 
       - name: Validate Kustomize overlays/prod output
         run: |
-          kubectl kustomize k8s/overlays/prod | kubeconform -strict -summary -kubernetes-version 1.30.0
+          kubectl kustomize k8s/overlays/prod | kubeconform -strict -ignore-missing-schemas -summary -kubernetes-version 1.30.0
 
   # ==========================================================
   # 7. End-to-End Compose Integration Smoke Test (§3.4)

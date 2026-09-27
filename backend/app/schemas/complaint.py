@@ -1,9 +1,11 @@
 from datetime import datetime
 from typing import Dict, List, Optional
 from uuid import UUID
+
 from pydantic import BaseModel, Field
 
 from app.schemas.common import Category, Priority, Status
+
 
 # Refined boundary validation rules for municipal complaints
 class ComplaintCreate(BaseModel):

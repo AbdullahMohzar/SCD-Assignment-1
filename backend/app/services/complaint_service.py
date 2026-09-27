@@ -1,5 +1,6 @@
 from typing import List, Optional, Tuple
 from uuid import UUID
+
 from fastapi import HTTPException, status
 
 from app.models.complaint import Complaint
@@ -82,7 +83,7 @@ class ComplaintService:
         complaint = await self.get_complaint_by_id(complaint_id)
 
         # Enforce state machine transitions
-        ComplaintStateMachine.validate_transition(complaint.status, target_status)
+        ComplaintStateMachine.validate_transition(Status(complaint.status), target_status)
 
         updated = await self.repository.update_status(complaint, target_status)
 

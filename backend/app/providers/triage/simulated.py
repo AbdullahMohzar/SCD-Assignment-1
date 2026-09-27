@@ -1,9 +1,9 @@
 import asyncio
 import hashlib
 from typing import Optional
+
 from app.providers.triage.base import TriageResult
 from app.providers.triage.rules import RuleBasedTriage
-from app.schemas.common import Category, Priority
 
 
 class SimulatedTriage:

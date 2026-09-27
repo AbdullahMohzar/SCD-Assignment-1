@@ -6,11 +6,9 @@ export const StatsPage: React.FC = () => {
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [xCache, setXCache] = useState<string>('MISS');
   const [meta, setMeta] = useState<ProviderMetaResponse | null>(null);
-  const [loading, setLoading] = useState(true);
   const [fetchTimestamp, setFetchTimestamp] = useState<string>('');
 
   const loadData = async () => {
-    setLoading(true);
     try {
       const [{ data, xCache: cacheHeader }, metaData] = await Promise.all([
         apiClient.getStats(),
@@ -22,8 +20,6 @@ export const StatsPage: React.FC = () => {
       setFetchTimestamp(new Date().toLocaleTimeString());
     } catch (err) {
       console.error('Failed to load stats data:', err);
-    } finally {
-      setLoading(false);
     }
   };
 

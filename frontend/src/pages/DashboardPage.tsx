@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { apiClient } from '../api/client';
-import { ApiError, Category, ComplaintResponse, Priority, Status } from '../api/types';
+import { ApiError, ComplaintResponse, Status } from '../api/types';
 import { PriorityBadge } from '../components/PriorityBadge';
 import { StatusBadge } from '../components/StatusBadge';
 

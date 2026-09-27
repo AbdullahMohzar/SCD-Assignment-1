@@ -1,4 +1,5 @@
 from typing import Dict, Tuple
+
 from app.providers.cache import get_cache_provider
 from app.repositories.complaint_repository import ComplaintRepository
 

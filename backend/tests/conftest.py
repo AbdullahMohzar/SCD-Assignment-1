@@ -1,6 +1,8 @@
+import asyncio
 import os
 import sys
 from typing import AsyncGenerator
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -17,10 +19,7 @@ os.environ["RATE_LIMIT_PER_MINUTE"] = "100"
 from app.database import get_db_session
 from app.dependencies import get_complaint_service, get_stats_service
 from app.main import app
-from app.models.complaint import Base, Complaint
-from app.providers.cache import CacheProvider, get_cache_provider
-from app.providers.rate_limiter import DistributedRateLimiter, get_rate_limiter
-from app.providers.triage.factory import get_triage_provider
+from app.models.complaint import Base
 from app.providers.triage.simulated import SimulatedTriage
 from app.repositories.complaint_repository import ComplaintRepository
 from app.services.complaint_service import ComplaintService

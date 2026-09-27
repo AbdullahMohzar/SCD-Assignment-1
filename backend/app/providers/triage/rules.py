@@ -1,4 +1,5 @@
 import re
+
 from app.providers.triage.base import TriageResult
 from app.schemas.common import Category, Priority
 

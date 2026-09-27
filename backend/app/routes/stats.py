@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Response
+
 from app.dependencies import get_stats_service
 from app.schemas.complaint import StatsResponse
 from app.services.stats_service import StatsService

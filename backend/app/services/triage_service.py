@@ -1,8 +1,9 @@
-from collections import deque
-from datetime import datetime, timezone
 import logging
 import time
-from typing import Deque, Dict, List, Optional, Tuple
+from collections import deque
+from datetime import datetime, timezone
+from typing import Deque, Optional, Tuple
+
 from prometheus_client import Counter, Histogram
 
 from app.config import get_settings
