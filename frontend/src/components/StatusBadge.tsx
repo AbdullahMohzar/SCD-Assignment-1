@@ -4,7 +4,7 @@ import { Status } from '../api/types';
 interface StatusBadgeProps {
   status: Status;
 }
-
+// Status badge styling with accessible contrast colors
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   let badgeClass = 'badge-gray';
   let label = status.replace('_', ' ');
