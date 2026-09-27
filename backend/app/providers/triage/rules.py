@@ -87,3 +87,4 @@ class RuleBasedTriage:
             summary=summary,
             confidence=round(confidence, 2),
         )
+# Sarim update: high priority for dangerous electrical wire sparking
