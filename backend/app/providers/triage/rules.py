@@ -87,3 +87,4 @@ class RuleBasedTriage:
             summary=summary,
             confidence=round(confidence, 2),
         )
+# Abdullah update: high priority for water burst emergencies
