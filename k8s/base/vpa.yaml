@@ -1,0 +1,22 @@
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: backend-vpa
+  namespace: civicpulse
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend
+  updatePolicy:
+    updateMode: "Off" # Recommender mode only — do not evict (§3.3, §5.2 Q6)
+  resourcePolicy:
+    containerPolicies:
+      - containerName: backend
+        minAllowed:
+          cpu: 50m
+          memory: 64Mi
+        maxAllowed:
+          cpu: 1000m
+          memory: 1024Mi
+        controlledResources: ["cpu", "memory"]
