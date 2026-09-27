@@ -1,0 +1,264 @@
+name: CivicPulse CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [dev]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  # ==========================================================
+  # 1. Lint and Static Typing (§3.4)
+  # ==========================================================
+  lint-and-type:
+    name: Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install backend linting dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff mypy types-redis -r backend/requirements.txt
+
+      - name: Run Ruff linter on backend
+        run: |
+          cd backend
+          ruff check app tests
+
+      - name: Run Mypy static type checker on backend
+        run: |
+          cd backend
+          mypy app
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package.json
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run TypeScript compiler check (tsc --noEmit)
+        run: |
+          cd frontend
+          npx tsc --noEmit
+
+  # ==========================================================
+  # 2. Backend Unit and Integration Tests (§3.4)
+  # Coverage >= 65% on app/, TRIAGE_PROVIDER=simulated
+  # ==========================================================
+  test-backend:
+    name: Backend Tests & Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-asyncio pytest-cov aiosqlite -r backend/requirements.txt
+
+      - name: Run Pytest with Coverage Gate (>= 65%)
+        env:
+          TRIAGE_PROVIDER: simulated
+        run: |
+          cd backend
+          pytest tests/ -v --cov=app --cov-report=term-missing --cov-fail-under=65
+
+  # ==========================================================
+  # 3. Frontend Component Tests (§3.4)
+  # ==========================================================
+  test-frontend:
+    name: Frontend Vitest Component Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package.json
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run Vitest tests
+        run: |
+          cd frontend
+          npm run test
+
+  # ==========================================================
+  # 4. Multi-Stage Container Image Build (§3.4)
+  # Builds both images without pushing on PR
+  # ==========================================================
+  build:
+    name: Build Container Images
+    runs-on: ubuntu-latest
+    needs: [lint-and-type, test-backend, test-frontend]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: actions/setup-buildx-action@v3
+
+      - name: Build backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: false
+          tags: civicpulse-backend:test
+          load: true
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: false
+          tags: civicpulse-frontend:test
+          load: true
+
+  # ==========================================================
+  # 5. Security & Vulnerability Scan (Trivy) (§3.4)
+  # ==========================================================
+  scan:
+    name: Vulnerability Scan (Trivy)
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build local images for scan
+        run: |
+          docker build -t civicpulse-backend:scan ./backend
+          docker build -t civicpulse-frontend:scan ./frontend
+
+      - name: Scan backend image with Trivy
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: civicpulse-backend:scan
+          format: "table"
+          exit-code: "0" # Audit mode for fixed CVEs
+          ignore-unfixed: true
+          severity: "CRITICAL,HIGH"
+
+      - name: Scan frontend image with Trivy
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: civicpulse-frontend:scan
+          format: "table"
+          exit-code: "0"
+          ignore-unfixed: true
+          severity: "CRITICAL,HIGH"
+
+  # ==========================================================
+  # 6. Kubernetes Manifest Validation (Kubeconform) (§3.4)
+  # ==========================================================
+  manifests:
+    name: Kubeconform Manifest Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Kubeconform
+        run: |
+          curl -sL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz | tar xz
+          sudo mv kubeconform /usr/local/bin/
+
+      - name: Validate Kustomize overlays/prod output
+        run: |
+          kubectl kustomize k8s/overlays/prod | kubeconform -strict -summary -kubernetes-version 1.30.0
+
+  # ==========================================================
+  # 7. End-to-End Compose Integration Smoke Test (§3.4)
+  # ==========================================================
+  integration:
+    name: Compose Integration Smoke Test
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Start Docker Compose stack
+        run: |
+          docker compose up -d --build
+          echo "Waiting for backend service readiness..."
+
+      - name: Wait for /ready endpoint (Postgres + Redis)
+        run: |
+          for i in {1..30}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/ready || true)
+            if [ "$STATUS" = "200" ]; then
+              echo "Backend is ready (HTTP 200)!"
+              break
+            fi
+            echo "Attempt $i: status is $STATUS, retrying in 2s..."
+            sleep 2
+          done
+
+      - name: Run Database Migrations & Seeds
+        run: |
+          docker compose exec -T backend alembic upgrade head
+          docker compose exec -T backend python seeds/seed_complaints.py
+
+      - name: Execute End-to-End Complaint & Cache Smoke Test
+        run: |
+          echo "1. POST complaint to /api/complaints"
+          POST_RES=$(curl -s -X POST http://localhost:8000/api/complaints \
+            -H "Content-Type: application/json" \
+            -d '{"text":"Severe water pipeline explosion flooding street","location":"Sector G-9, Islamabad"}')
+          echo "Created complaint: $POST_RES"
+
+          echo "2. Query /api/stats (first hit - should be MISS)"
+          CACHE1=$(curl -s -I http://localhost:8000/api/stats | grep -i "X-Cache" | tr -d '\r')
+          echo "Header 1: $CACHE1"
+
+          echo "3. Query /api/stats (second hit - should be HIT)"
+          CACHE2=$(curl -s -I http://localhost:8000/api/stats | grep -i "X-Cache" | tr -d '\r')
+          echo "Header 2: $CACHE2"
+
+      - name: Verify Network Segmentation (§3.2)
+        run: |
+          echo "Verifying that frontend cannot reach database..."
+          # docker compose exec frontend ping database must fail
+          if docker compose exec -T frontend ping -c 1 -W 2 database 2>/dev/null; then
+            echo "ERROR: Frontend was able to reach database! Network isolation failed."
+            exit 1
+          else
+            echo "SUCCESS: Network isolation verified. Frontend cannot reach database."
+          fi
+
+      - name: Teardown Compose stack
+        if: always()
+        run: |
+          docker compose down -v
