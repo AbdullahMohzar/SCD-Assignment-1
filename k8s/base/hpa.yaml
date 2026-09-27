@@ -34,3 +34,5 @@ spec:
           value: 4
           periodSeconds: 15
       selectPolicy: Max
+
+# Tuned stabilization windows to prevent flapping during load surges

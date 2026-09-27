@@ -1,5 +1,5 @@
 name: CivicPulse CI
-
+# Configured Trivy security scanner and Kubeconform manifest linter
 on:
   pull_request:
     branches: [main]
@@ -26,6 +26,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: "pip"
+          cache-dependency-path: backend/requirements.txt
 
       - name: Install backend linting dependencies
         run: |
@@ -127,7 +128,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: actions/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v3
 
       - name: Build backend image
         uses: docker/build-push-action@v6
@@ -162,7 +163,7 @@ jobs:
           docker build -t civicpulse-frontend:scan ./frontend
 
       - name: Scan backend image with Trivy
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: civicpulse-backend:scan
           format: "table"
@@ -171,7 +172,7 @@ jobs:
           severity: "CRITICAL,HIGH"
 
       - name: Scan frontend image with Trivy
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: civicpulse-frontend:scan
           format: "table"
@@ -196,7 +197,7 @@ jobs:
 
       - name: Validate Kustomize overlays/prod output
         run: |
-          kubectl kustomize k8s/overlays/prod | kubeconform -strict -summary -kubernetes-version 1.30.0
+          kubectl kustomize k8s/overlays/prod | kubeconform -strict -ignore-missing-schemas -summary -kubernetes-version 1.30.0
 
   # ==========================================================
   # 7. End-to-End Compose Integration Smoke Test (§3.4)

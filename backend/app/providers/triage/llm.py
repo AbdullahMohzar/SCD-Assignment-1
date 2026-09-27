@@ -2,8 +2,8 @@ import asyncio
 import json
 import logging
 import random
-import re
 from typing import Optional
+
 import httpx
 from openai import AsyncOpenAI
 from pydantic import ValidationError

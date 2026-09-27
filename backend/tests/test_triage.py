@@ -1,8 +1,8 @@
 import pytest
+
 from app.providers.triage.rules import RuleBasedTriage
 from app.providers.triage.simulated import SimulatedTriage
 from app.schemas.common import Category, Priority
-from app.services.triage_service import TriageService
 
 
 @pytest.mark.asyncio

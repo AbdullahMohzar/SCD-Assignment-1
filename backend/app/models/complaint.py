@@ -1,5 +1,7 @@
 import uuid
 from datetime import datetime, timezone
+from typing import Any
+
 from sqlalchemy import (
     CheckConstraint,
     Column,
@@ -11,30 +13,32 @@ from sqlalchemy import (
     Text,
 )
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import DeclarativeBase
 
 from app.schemas.common import Category, Priority, Status
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
 
 
 class Complaint(Base):
     __tablename__ = "complaints"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    text = Column(Text, nullable=False)
-    location = Column(String(200), nullable=False)
-    reporter_contact = Column(String(100), nullable=True)
+    id: Any = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    text: Any = Column(Text, nullable=False)
+    location: Any = Column(String(200), nullable=False)
+    reporter_contact: Any = Column(String(100), nullable=True)
 
-    category = Column(
+    category: Any = Column(
         Enum(Category, name="category_enum", values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
     )
-    priority = Column(
+    priority: Any = Column(
         Enum(Priority, name="priority_enum", values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
     )
-    status = Column(
+    status: Any = Column(
         Enum(Status, name="status_enum", values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
         default=Status.OPEN,

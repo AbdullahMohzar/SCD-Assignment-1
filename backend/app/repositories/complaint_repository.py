@@ -1,5 +1,6 @@
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import UUID
+
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -71,7 +72,7 @@ class ComplaintRepository:
         total = (await self.session.execute(total_stmt)).scalar_one() or 0
 
         # Aggregates by category
-        cat_stmt = select(Complaint.category, func.count(Complaint.id)).group_by(Complaint.category)
+        cat_stmt: Any = select(Complaint.category, func.count(Complaint.id)).group_by(Complaint.category)
         cat_res = await self.session.execute(cat_stmt)
         by_category = {cat.value if hasattr(cat, "value") else str(cat): count for cat, count in cat_res.all()}
 
@@ -81,7 +82,7 @@ class ComplaintRepository:
                 by_category[cat.value] = 0
 
         # Aggregates by priority
-        prio_stmt = select(Complaint.priority, func.count(Complaint.id)).group_by(Complaint.priority)
+        prio_stmt: Any = select(Complaint.priority, func.count(Complaint.id)).group_by(Complaint.priority)
         prio_res = await self.session.execute(prio_stmt)
         by_priority = {prio.value if hasattr(prio, "value") else str(prio): count for prio, count in prio_res.all()}
 
@@ -90,7 +91,7 @@ class ComplaintRepository:
                 by_priority[prio.value] = 0
 
         # Aggregates by status
-        stat_stmt = select(Complaint.status, func.count(Complaint.id)).group_by(Complaint.status)
+        stat_stmt: Any = select(Complaint.status, func.count(Complaint.id)).group_by(Complaint.status)
         stat_res = await self.session.execute(stat_stmt)
         by_status = {stat.value if hasattr(stat, "value") else str(stat): count for stat, count in stat_res.all()}
 

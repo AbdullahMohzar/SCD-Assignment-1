@@ -1,8 +1,6 @@
 import pytest
 from httpx import AsyncClient
 
-from app.providers.rate_limiter import DistributedRateLimiter, get_rate_limiter
-
 
 class MockRateLimiter:
     """Mock rate limiter that trips after configured requests."""

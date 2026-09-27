@@ -2,6 +2,7 @@ import hashlib
 import json
 import logging
 from typing import Any, Optional
+
 import redis.asyncio as redis
 
 from app.config import get_settings
@@ -29,7 +30,8 @@ class CacheProvider:
     async def get(self, key: str) -> Optional[str]:
         try:
             client = await self.get_client()
-            return await client.get(key)
+            res = await client.get(key)
+            return str(res) if res is not None else None
         except Exception as e:
             logger.warning(f"Redis GET failed for key {key}: {e}")
             return None
@@ -55,16 +57,17 @@ class CacheProvider:
     # Stats caching helper
     STATS_CACHE_KEY = "civicpulse:stats"
 
-    async def get_stats_cache(self) -> Optional[dict]:
+    async def get_stats_cache(self) -> Optional[dict[str, Any]]:
         raw = await self.get(self.STATS_CACHE_KEY)
         if raw:
             try:
-                return json.loads(raw)
+                data = json.loads(raw)
+                return data if isinstance(data, dict) else None
             except Exception:
                 return None
         return None
 
-    async def set_stats_cache(self, stats: dict, ttl: int = 30) -> None:
+    async def set_stats_cache(self, stats: dict[str, Any], ttl: int = 30) -> None:
         await self.set(self.STATS_CACHE_KEY, json.dumps(stats), ttl_seconds=ttl)
 
     async def invalidate_stats_cache(self) -> None:
@@ -75,17 +78,18 @@ class CacheProvider:
         payload = f"{text.strip().lower()}|{location.strip().lower()}"
         return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
-    async def get_triage_cache(self, text: str, location: str) -> Optional[dict]:
+    async def get_triage_cache(self, text: str, location: str) -> Optional[dict[str, Any]]:
         h = self.compute_triage_hash(text, location)
         raw = await self.get(f"civicpulse:triage:{h}")
         if raw:
             try:
-                return json.loads(raw)
+                data = json.loads(raw)
+                return data if isinstance(data, dict) else None
             except Exception:
                 return None
         return None
 
-    async def set_triage_cache(self, text: str, location: str, result: dict, ttl: int = 86400) -> None:
+    async def set_triage_cache(self, text: str, location: str, result: dict[str, Any], ttl: int = 86400) -> None:
         h = self.compute_triage_hash(text, location)
         await self.set(f"civicpulse:triage:{h}", json.dumps(result), ttl_seconds=ttl)
 

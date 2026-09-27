@@ -1,4 +1,5 @@
 from typing import Protocol, runtime_checkable
+
 from pydantic import BaseModel, Field
 
 from app.schemas.common import Category, Priority

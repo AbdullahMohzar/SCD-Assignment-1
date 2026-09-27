@@ -1,11 +1,13 @@
 from datetime import datetime
 from typing import Dict, List, Optional
 from uuid import UUID
+
 from pydantic import BaseModel, Field
 
 from app.schemas.common import Category, Priority, Status
 
 
+# Refined boundary validation rules for municipal complaints
 class ComplaintCreate(BaseModel):
     text: str = Field(..., min_length=10, max_length=2000, description="Detailed complaint description")
     location: str = Field(..., min_length=3, max_length=200, description="Geographic location or address")

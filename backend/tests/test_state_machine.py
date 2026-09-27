@@ -1,4 +1,5 @@
 import pytest
+
 from app.schemas.common import Status
 from app.services.state_machine import ComplaintStateMachine, InvalidStatusTransitionError
 
