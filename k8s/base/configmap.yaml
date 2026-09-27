@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: civicpulse-config
+  namespace: civicpulse
+data:
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+  PORT: "8000"
+  TRIAGE_PROVIDER: "llm:groq"
+  TRIAGE_TIMEOUT_SECONDS: "10"
+  TRIAGE_CACHE_TTL_SECONDS: "86400"
+  RATE_LIMIT_PER_MINUTE: "20"
+  POSTGRES_DB: "civicpulse"
+  DATABASE_HOST: "postgres"
+  DATABASE_PORT: "5432"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
