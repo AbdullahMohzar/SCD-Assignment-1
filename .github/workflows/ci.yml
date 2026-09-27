@@ -1,5 +1,5 @@
 name: CivicPulse CI
-
+# Configured Trivy security scanner and Kubeconform manifest linter
 on:
   pull_request:
     branches: [main]
