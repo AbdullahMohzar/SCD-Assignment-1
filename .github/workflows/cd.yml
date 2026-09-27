@@ -1,0 +1,150 @@
+name: CivicPulse CD
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE_NAME: ${{ github.repository }}/backend
+  FRONTEND_IMAGE_NAME: ${{ github.repository }}/frontend
+
+jobs:
+  # ==========================================================
+  # 1. Gatekeeper Test Suite (§3.4)
+  # Re-verifies all tests on merged main before releasing
+  # ==========================================================
+  test:
+    name: Merged Main Quality Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run Backend Tests
+        run: |
+          pip install pytest pytest-asyncio pytest-cov aiosqlite -r backend/requirements.txt
+          cd backend
+          pytest tests/ -v --cov=app --cov-report=term-missing --cov-fail-under=65
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run Frontend Tests
+        run: |
+          cd frontend
+          npm ci
+          npm run test
+
+  # ==========================================================
+  # 2. Build, Sign & Push Images with SBOM (§3.4)
+  # Gated strictly by needs: test
+  # ==========================================================
+  build-push:
+    name: Build & Push Images to GHCR
+    runs-on: ubuntu-latest
+    needs: test
+    outputs:
+      backend_digest: ${{ steps.build_backend.outputs.digest }}
+      frontend_digest: ${{ steps.build_frontend.outputs.digest }}
+      commit_sha: ${{ github.sha }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: actions/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Backend image by SHA and latest
+        id: build_backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:latest
+
+      - name: Build and push Frontend image by SHA and latest
+        id: build_frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
+
+      - name: Generate SBOM with Syft (§3.4)
+        uses: anchore/sbom-action@v0.17.9
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}
+          format: spdx-json
+          output-file: backend-sbom.spdx.json
+
+  # ==========================================================
+  # 3. Continuous Deployment to Kubernetes (§3.4)
+  # Deploys by immutable commit SHA, waits for rollout, smoke tests
+  # ==========================================================
+  deploy-k8s:
+    name: Ephemeral Kubernetes Deployment & Smoke Verification
+    runs-on: ubuntu-latest
+    needs: build-push
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create local Kind Cluster
+        uses: helm/kind-action@v1.12.0
+        with:
+          cluster_name: civicpulse-cd-cluster
+
+      - name: Set up Kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Update Kustomize image tags to immutable commit SHA (§3.4)
+        run: |
+          cd k8s/overlays/prod
+          kustomize edit set image ghcr.io/civicpulse/backend=${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}
+          kustomize edit set image ghcr.io/civicpulse/frontend=${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Apply Kubernetes Manifests to Cluster
+        run: |
+          kubectl apply -k k8s/overlays/prod
+
+      - name: Wait for Deployment Rollouts
+        run: |
+          kubectl rollout status statefulset/postgres -n civicpulse --timeout=120s
+          kubectl rollout status deployment/redis -n civicpulse --timeout=120s
+          kubectl rollout status deployment/backend -n civicpulse --timeout=180s
+          kubectl rollout status deployment/frontend -n civicpulse --timeout=120s
+
+      - name: Smoke Test Backend Ingress
+        run: |
+          kubectl port-forward svc/backend 8000:8000 -n civicpulse &
+          sleep 5
+          curl -f http://localhost:8000/health
+          echo "Backend liveness verified successfully in Kubernetes!"
+
+      - name: Print HPA Status (§3.3)
+        run: |
+          kubectl get hpa -n civicpulse

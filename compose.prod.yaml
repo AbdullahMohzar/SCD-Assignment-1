@@ -1,0 +1,156 @@
+services:
+  # ==========================================================
+  # Frontend Service (Production Image by Tag/Digest)
+  # ==========================================================
+  frontend:
+    image: ghcr.io/civicpulse/frontend:${IMAGE_TAG:-latest}
+    container_name: civicpulse_prod_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    networks:
+      - edge
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+        reservations:
+          cpus: "0.10"
+          memory: 64M
+
+  # ==========================================================
+  # Backend Service (Production Image by Tag/Digest)
+  # Bridges edge and internal networks; no bind mounts
+  # ==========================================================
+  backend:
+    image: ghcr.io/civicpulse/backend:${IMAGE_TAG:-latest}
+    container_name: civicpulse_prod_backend
+    restart: unless-stopped
+    networks:
+      - edge
+      - internal
+    environment:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-civicpulse_user}:${POSTGRES_PASSWORD:-civicpulse_secure_password_replace_in_prod}@database:5432/${POSTGRES_DB:-civicpulse}
+      - SYNC_DATABASE_URL=postgresql://${POSTGRES_USER:-civicpulse_user}:${POSTGRES_PASSWORD:-civicpulse_secure_password_replace_in_prod}@database:5432/${POSTGRES_DB:-civicpulse}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-civicpulse_redis_secret_replace_in_prod}@cache:6379/0
+      - RATE_LIMIT_PER_MINUTE=${RATE_LIMIT_PER_MINUTE:-20}
+      - TRIAGE_PROVIDER=${TRIAGE_PROVIDER:-llm:groq}
+      - TRIAGE_TIMEOUT_SECONDS=10
+      - TRIAGE_CACHE_TTL_SECONDS=86400
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=llama3.2:1b
+    depends_on:
+      database:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+  # ==========================================================
+  # Database Service (PostgreSQL 16)
+  # NO published host ports in production (§3.2, §5.3)
+  # ==========================================================
+  database:
+    image: postgres:16.6-alpine
+    container_name: civicpulse_prod_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-civicpulse}
+      POSTGRES_USER: ${POSTGRES_USER:-civicpulse_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-civicpulse_secure_password_replace_in_prod}
+    networks:
+      - internal
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-civicpulse_user} -d ${POSTGRES_DB:-civicpulse}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+  # ==========================================================
+  # Cache & Rate Limiting Service (Redis 7)
+  # NO published host ports in production (§3.2, §5.3)
+  # ==========================================================
+  cache:
+    image: redis:7.4.2-alpine
+    container_name: civicpulse_prod_redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD:-civicpulse_redis_secret_replace_in_prod}
+      --appendonly yes
+      --appendfsync everysec
+    networks:
+      - internal
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-civicpulse_redis_secret_replace_in_prod}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+        reservations:
+          cpus: "0.10"
+          memory: 64M
+
+# ==========================================================
+# Network Segmentation (§3.2)
+# ==========================================================
+networks:
+  edge:
+    driver: bridge
+  internal:
+    driver: bridge
+    internal: true
+
+# ==========================================================
+# Named Volumes (§3.2)
+# ==========================================================
+volumes:
+  pgdata:
+    name: civicpulse_prod_pgdata
+  redisdata:
+    name: civicpulse_prod_redisdata
