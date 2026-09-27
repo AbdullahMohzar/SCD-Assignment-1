@@ -2,6 +2,7 @@ import re
 from app.providers.triage.base import TriageResult
 from app.schemas.common import Category, Priority
 
+# Added regional colloquial keywords for Pakistani municipal triage
 
 class RuleBasedTriage:
     """Deterministic keyword fallback triage provider.
