@@ -163,7 +163,7 @@ jobs:
           docker build -t civicpulse-frontend:scan ./frontend
 
       - name: Scan backend image with Trivy
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: civicpulse-backend:scan
           format: "table"
@@ -172,7 +172,7 @@ jobs:
           severity: "CRITICAL,HIGH"
 
       - name: Scan frontend image with Trivy
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: civicpulse-frontend:scan
           format: "table"
