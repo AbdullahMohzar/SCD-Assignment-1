@@ -32,6 +32,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Lowercase image names
+        run: |
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "BACKEND_IMAGE_NAME=${REPO_LOWER}/backend" >> $GITHUB_ENV
+          echo "FRONTEND_IMAGE_NAME=${REPO_LOWER}/frontend" >> $GITHUB_ENV
+
       - name: Extract Tag Name
         id: tag_name
         run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
