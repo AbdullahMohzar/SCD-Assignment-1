@@ -139,9 +139,22 @@ jobs:
           kustomize edit set image ghcr.io/civicpulse/backend=${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}
           kustomize edit set image ghcr.io/civicpulse/frontend=${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}
 
+      - name: Install VPA CRDs in Kind cluster
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes/autoscaler/master/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml
+
       - name: Apply Kubernetes Manifests to Cluster
         run: |
           kubectl apply -k k8s/overlays/prod
+
+      - name: Configure GHCR image pull secret
+        run: |
+          kubectl create secret docker-registry ghcr-secret \
+            --docker-server=ghcr.io \
+            --docker-username=${{ github.actor }} \
+            --docker-password=${{ secrets.GITHUB_TOKEN }} \
+            -n civicpulse || true
+          kubectl patch serviceaccount default -p '{"imagePullSecrets": [{"name": "ghcr-secret"}]}' -n civicpulse || true
 
       - name: Wait for Deployment Rollouts
         run: |
