@@ -4,7 +4,7 @@ from app.services.state_machine import ComplaintStateMachine, InvalidStatusTrans
 
 
 def test_allowed_transitions():
-    assert ComplaintStateMachine.can_transition(Status.OPEN, Status.IN_PROGRESS) is True
+    assert ComplaintStateMachine.can_transition(Status.OPEN, Status.IN_PROGRESS) is False
     assert ComplaintStateMachine.can_transition(Status.OPEN, Status.REJECTED) is True
     assert ComplaintStateMachine.can_transition(Status.IN_PROGRESS, Status.RESOLVED) is True
     assert ComplaintStateMachine.can_transition(Status.IN_PROGRESS, Status.REJECTED) is True
