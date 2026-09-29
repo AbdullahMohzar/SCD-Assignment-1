@@ -13,6 +13,9 @@ class RuleBasedTriage:
 
     name: str = "rules"
 
+    # Regional vocabulary mapping: Includes standard English keywords and common
+    # Urdu-influenced municipal terms (e.g., bijli, kachra, tanki, sarak, andhera)
+    # ensuring robust classification even when citizens use regional phrasing.
     KEYWORDS = {
         Category.WATER: [
             "water", "pipe", "pipeline", "leak", "leakage", "burst", "flooding", "flood",
