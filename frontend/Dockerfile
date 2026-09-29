@@ -33,11 +33,14 @@ RUN touch /var/run/nginx.pid && \
     chown -R nginx:nginx /var/run/nginx.pid /var/cache/nginx /usr/share/nginx/html
 
 # Expose HTTP port
-EXPOSE 80
+EXPOSE 8080
 
 # Healthcheck probe (§3.1)
 HEALTHCHECK --interval=15s --timeout=5s --start-period=5s --retries=3 \
-    CMD wget --quiet --tries=1 --spider http://localhost:80/health || exit 1
+    CMD wget --quiet --tries=1 --spider http://localhost:8080/health || exit 1
+
+# Run as non-root user (§3.1)
+USER nginx
 
 # Exec form CMD (§3.1)
 CMD ["nginx", "-g", "daemon off;"]

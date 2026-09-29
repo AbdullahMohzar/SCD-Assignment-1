@@ -108,7 +108,28 @@ docker compose exec backend python seeds/seed_complaints.py
 
 ---
 
-## 5. Automated Verification & Pre-Flight Lint
+## 5. Screenshots & Evidence
+
+### Submit Complaint View
+The submission form captures free-text complaint, location, and optional contact. After AI triage, the returned category, priority, AI summary, and triage provider are displayed.
+
+### Operations Dashboard
+The dashboard provides paginated, filterable complaint listings with status transition controls. Invalid status transitions surface the server's 409 message verbatim.
+
+### Stats & Cache Telemetry
+The stats view renders aggregate counts by category, priority, and status. The `X-Cache` badge shows whether the response was served from Redis cache (HIT) or computed from PostgreSQL (MISS).
+
+### Evidence Artifacts
+| Evidence | Description | File |
+| :--- | :--- | :--- |
+| Branch Protection | GitHub branch protection ruleset screenshot | [`branch-protection.png`](docs/evidence/branch-protection.png) |
+| CI Quality Gate | Red-to-green CI gate blocking then unblocking merge | [`ci-gate-red-green.png`](docs/evidence/ci-gate-red-green.png) |
+| Merge Conflict | Deliberate merge conflict in triage keywords | [`merge-conflict.png`](docs/evidence/merge-conflict.png) |
+| HPA Scaling | Horizontal Pod Autoscaler scale-out under load | [`hpa-scaling-chart.png`](docs/evidence/hpa-scaling-chart.png) |
+
+---
+
+## 6. Automated Verification & Pre-Flight Lint
 
 Run the submission validation script from the repository root:
 ```bash
@@ -126,7 +147,7 @@ cd frontend && npm run test
 
 ---
 
-## 6. Architecture Decision Records (ADRs)
+## 7. Architecture Decision Records (ADRs)
 - [ADR 0001: Pluggable AI Triage Provider Interface](docs/adr/0001-provider-interface.md)
 - [ADR 0002: Frontend Runtime Configuration via Reverse Proxy](docs/adr/0002-frontend-runtime-config.md)
 - [ADR 0003: Immutable Deployments via Git Commit SHA](docs/adr/0003-deploy-by-sha.md)
@@ -134,7 +155,7 @@ cd frontend && npm run test
 
 ---
 
-## 7. Operational Runbook & Engineering Notes
+## 8. Operational Runbook & Engineering Notes
 - [Operations Runbook](docs/RUNBOOK.md)
 - [Engineering Notes (Answering §5.2 Q1–Q8)](docs/ENGINEERING-NOTES.md)
 - [AI Usage Disclosure](docs/AI-USAGE.md)
