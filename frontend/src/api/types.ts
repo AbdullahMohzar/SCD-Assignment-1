@@ -1,7 +1,13 @@
+/** Municipal service categories mapped to city departments */
 export type Category = 'water' | 'electricity' | 'sanitation' | 'roads' | 'streetlights' | 'other';
+
+/** Triage priority levels computed by AI model */
 export type Priority = 'high' | 'normal' | 'low';
+
+/** Lifecycle status for ticket state machine (open -> in_progress -> resolved/rejected) */
 export type Status = 'open' | 'in_progress' | 'resolved' | 'rejected';
 
+/** Payload submitted by citizens via web form */
 export interface ComplaintCreate {
   text: string;
   location: string;
