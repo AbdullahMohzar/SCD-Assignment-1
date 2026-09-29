@@ -161,3 +161,17 @@ curl -s http://localhost:8000/api/stats | jq .total
 # This command MUST fail with exit code 1 or timeout:
 docker compose exec frontend ping -c 2 -W 2 database
 ```
+
+---
+
+## 6. On-Call Quick Diagnostic Checklist
+
+| Subsystem | Health Probe Command | Expected Healthy Output |
+| :--- | :--- | :--- |
+| **Backend API** | `curl -s http://localhost:8000/health` | `{"status":"alive"}` |
+| **Dependencies** | `curl -s http://localhost:8000/ready` | `{"status":"ready", ...}` |
+| **PostgreSQL** | `docker compose exec database pg_isready -U civicpulse_user` | `accepting connections` |
+| **Redis Cache** | `docker compose exec cache redis-cli ping` | `PONG` |
+| **K8s Workloads** | `kubectl get pods -n civicpulse` | `Running (Ready: 1/1)` |
+| **HPA Status** | `kubectl get hpa -n civicpulse` | `Target: <utilization>/60%` |
+

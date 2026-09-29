@@ -70,8 +70,11 @@ export const StatsPage: React.FC = () => {
               <span style={{ fontSize: '0.875rem', color: '#334155' }}>
                 {xCache === 'HIT'
                   ? 'Served directly from Redis memory (TTL 30s). Zero SQL queries executed.'
-                  : 'Cache miss. Freshly computed from PostgreSQL and cached into Redis.'}
+                  : 'Cache miss. Freshly computed from PostgreSQL and cached into Redis (invalidated on new ticket submission).'}
               </span>
+            </div>
+            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>
+              Automatic write invalidation ensures newly submitted complaints appear immediately without waiting for TTL expiration.
             </div>
           </div>
 

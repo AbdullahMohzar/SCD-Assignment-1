@@ -6,12 +6,15 @@ import { check, sleep } from 'k6';
 // to drive CPU utilization above the 60% HPA target threshold.
 
 export const options = {
+  // Scaling timeline correlates directly with k8s/base/hpa.yaml:
+  // - scaleUp stabilizationWindowSeconds: 0 -> immediate scaling when CPU > 60%
+  // - scaleDown stabilizationWindowSeconds: 300 -> 5m delay prevents thrashing/flapping
   stages: [
-    { duration: '30s', target: 10 },  // Baseline warmup
-    { duration: '1m', target: 50 },   // Ramp up to trigger CPU scale-out
-    { duration: '2m', target: 100 },  // Peak load (pushes replicas towards max 10)
+    { duration: '30s', target: 10 },  // Baseline warmup (2 replicas)
+    { duration: '1m', target: 50 },   // Ramp up to trigger CPU scale-out (2 -> 4 replicas)
+    { duration: '2m', target: 100 },  // Peak load (pushes replicas towards 7 -> 10)
     { duration: '1m', target: 50 },   // Gradual ramp down
-    { duration: '30s', target: 0 },   // Cooldown (observes stabilizationWindowSeconds 300)
+    { duration: '30s', target: 0 },   // Cooldown (observes 300s stabilization window before scale-in)
   ],
   thresholds: {
     http_req_duration: ['p(95)<2000'], // 95% of requests complete under 2s

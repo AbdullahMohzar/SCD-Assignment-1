@@ -152,6 +152,9 @@ export const SubmitPage: React.FC = () => {
               disabled={loading}
               data-testid="input-contact"
             />
+            <span style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>
+              Protected by PII governance (ADR-0004): Contact information is stored in internal PostgreSQL and never sent to external AI providers.
+            </span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>

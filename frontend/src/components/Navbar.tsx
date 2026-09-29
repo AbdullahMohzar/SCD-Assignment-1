@@ -19,11 +19,13 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab }) => {
           </div>
         </div>
 
-        <nav style={{ display: 'flex', gap: '0.5rem' }}>
+        <nav style={{ display: 'flex', gap: '0.5rem' }} aria-label="Main Navigation">
           <button
             onClick={() => onSelectTab('submit')}
             className={`btn ${currentTab === 'submit' ? 'btn-primary' : 'btn-outline'}`}
             data-testid="nav-submit"
+            aria-label="Submit a new municipal complaint"
+            aria-current={currentTab === 'submit' ? 'page' : undefined}
           >
             Submit Complaint
           </button>
@@ -31,6 +33,8 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab }) => {
             onClick={() => onSelectTab('dashboard')}
             className={`btn ${currentTab === 'dashboard' ? 'btn-primary' : 'btn-outline'}`}
             data-testid="nav-dashboard"
+            aria-label="View municipal operations dashboard"
+            aria-current={currentTab === 'dashboard' ? 'page' : undefined}
           >
             Operations Dashboard
           </button>
@@ -38,6 +42,8 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab }) => {
             onClick={() => onSelectTab('stats')}
             className={`btn ${currentTab === 'stats' ? 'btn-primary' : 'btn-outline'}`}
             data-testid="nav-stats"
+            aria-label="View real-time complaint analytics and cache telemetry"
+            aria-current={currentTab === 'stats' ? 'page' : undefined}
           >
             Real-time Stats
           </button>
