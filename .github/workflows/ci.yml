@@ -60,6 +60,11 @@ jobs:
           cd frontend
           npx tsc --noEmit
 
+      - name: Run ESLint on frontend
+        run: |
+          cd frontend
+          npm run lint
+
   # ==========================================================
   # 2. Backend Unit and Integration Tests (§3.4)
   # Coverage >= 65% on app/, TRIAGE_PROVIDER=simulated
@@ -163,20 +168,20 @@ jobs:
           docker build -t civicpulse-frontend:scan ./frontend
 
       - name: Scan backend image with Trivy
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: civicpulse-backend:scan
           format: "table"
-          exit-code: "0" # Audit mode for fixed CVEs
+          exit-code: "1"
           ignore-unfixed: true
           severity: "CRITICAL,HIGH"
 
       - name: Scan frontend image with Trivy
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: civicpulse-frontend:scan
           format: "table"
-          exit-code: "0"
+          exit-code: "1"
           ignore-unfixed: true
           severity: "CRITICAL,HIGH"
 
@@ -240,13 +245,48 @@ jobs:
             -d '{"text":"Severe water pipeline explosion flooding street","location":"Sector G-9, Islamabad"}')
           echo "Created complaint: $POST_RES"
 
-          echo "2. Query /api/stats (first hit - should be MISS)"
-          CACHE1=$(curl -s -I http://localhost:8000/api/stats | grep -i "X-Cache" | tr -d '\r')
-          echo "Header 1: $CACHE1"
+          # Extract complaint ID and verify POST succeeded
+          COMPLAINT_ID=$(echo "$POST_RES" | jq -r '.id')
+          if [ "$COMPLAINT_ID" = "null" ] || [ -z "$COMPLAINT_ID" ]; then
+            echo "ERROR: Failed to create complaint"
+            exit 1
+          fi
+          echo "Complaint ID: $COMPLAINT_ID"
 
-          echo "3. Query /api/stats (second hit - should be HIT)"
-          CACHE2=$(curl -s -I http://localhost:8000/api/stats | grep -i "X-Cache" | tr -d '\r')
+          echo "2. GET complaint back by ID"
+          GET_RES=$(curl -s http://localhost:8000/api/complaints/$COMPLAINT_ID)
+          echo "Retrieved complaint: $GET_RES"
+
+          # Assert category is a valid value from enum
+          CATEGORY=$(echo "$GET_RES" | jq -r '.category')
+          echo "Category: $CATEGORY"
+          if [ "$CATEGORY" = "null" ] || [ -z "$CATEGORY" ]; then
+            echo "ERROR: Category is missing from GET response"
+            exit 1
+          fi
+          echo "Category assertion PASSED: $CATEGORY"
+
+          echo "3. Query /api/stats (first hit - should be MISS)"
+          CACHE1=$(curl -s -D - -o /dev/null http://localhost:8000/api/stats | grep -i "X-Cache" | tr -d '\r')
+          echo "Header 1: $CACHE1"
+          if echo "$CACHE1" | grep -qi "MISS"; then
+            echo "X-Cache MISS assertion PASSED"
+          else
+            echo "ERROR: Expected X-Cache: MISS on first stats call"
+            exit 1
+          fi
+
+          echo "4. Query /api/stats (second hit - should be HIT)"
+          CACHE2=$(curl -s -D - -o /dev/null http://localhost:8000/api/stats | grep -i "X-Cache" | tr -d '\r')
           echo "Header 2: $CACHE2"
+          if echo "$CACHE2" | grep -qi "HIT"; then
+            echo "X-Cache HIT assertion PASSED"
+          else
+            echo "ERROR: Expected X-Cache: HIT on second stats call"
+            exit 1
+          fi
+
+          echo "All smoke test assertions PASSED"
 
       - name: Verify Network Segmentation (§3.2)
         run: |

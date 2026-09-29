@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Response, status
+from fastapi import APIRouter, Depends, Response, status
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
-from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import AsyncSessionLocal
+from app.database import get_db_session
 from app.providers.cache import get_cache_provider
+from app.repositories.complaint_repository import ComplaintRepository
 
 router = APIRouter(tags=["health"])
 
@@ -18,7 +19,10 @@ async def liveness() -> dict:
 
 
 @router.get("/ready")
-async def readiness(response: Response) -> dict:
+async def readiness(
+    response: Response,
+    session: AsyncSession = Depends(get_db_session),
+) -> dict:
     """Readiness probe.
 
     Verifies both PostgreSQL and Redis connectivity.
@@ -26,14 +30,16 @@ async def readiness(response: Response) -> dict:
     """
     failed_dependencies = []
 
-    # 1. Check PostgreSQL connectivity
+    # 1. Check PostgreSQL connectivity via repository layer
     try:
-        async with AsyncSessionLocal() as session:
-            await session.execute(text("SELECT 1"))
+        repo = ComplaintRepository(session)
+        is_pg_ok = await repo.ping()
+        if not is_pg_ok:
+            failed_dependencies.append("postgres (ping returned false)")
     except Exception as e:
         failed_dependencies.append(f"postgres ({e.__class__.__name__})")
 
-    # 2. Check Redis connectivity
+    # 2. Check Redis connectivity via provider layer
     try:
         cache = get_cache_provider()
         is_redis_ok = await cache.ping()
