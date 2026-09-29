@@ -32,6 +32,7 @@ Municipal emergencies generate cluster reports: when a water main bursts on Stre
 - **Cache Hits**: 214 requests served in **under 2ms** from Redis memory.
 - **Cache Hit Rate**: **21.4%**.
 - **Impact**: Reduced upstream inference latency by 72 seconds and saved approximately 65,000 input/output tokens.
+- **Quota Defense**: Reduces API quota consumption by 21.4%, effectively increasing municipal burst capacity on free-tier LLMs without triggering rate-limit 429s.
 
 ---
 
